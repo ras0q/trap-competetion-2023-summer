@@ -6,3 +6,5 @@ mkdir -p $COMPETITION/{input,output,working}
 kaggle competitions download -c $COMPETITION
 unzip $COMPETITION.zip -d $COMPETITION/input
 rm $COMPETITION.zip
+
+touch $COMPETITION/working/main.py
