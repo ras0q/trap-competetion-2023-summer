@@ -28,6 +28,15 @@ def preprocess(
         anime, left_on="anime_id", right_on="id", how="left"
     )
 
+    # title, synopsisの単語数をカウント
+    joined["title_word_count"] = (
+        joined["title"].fillna("").apply(lambda x: len(x.split()))
+    )
+    joined["synopsis_word_count"] = (
+        joined["synopsis"].fillna("").apply(lambda x: len(x.split()))
+    )
+    joined = joined.drop(columns=["title", "synopsis"])
+
     # 誕生年だけを抽出
     def _get_birth_year(birthday):
         if type(birthday) != str:
