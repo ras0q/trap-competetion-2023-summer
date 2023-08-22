@@ -51,6 +51,12 @@ def preprocess(
         lambda x: x if x in range(1, 13) else None
     )
 
+    # 大きすぎるepisodesをNoneにする
+    _episodes_large = joined["episodes"].quantile(0.99)
+    joined["episodes"] = joined["episodes"].apply(
+        lambda x: x if x < _episodes_large else None
+    )
+
     # genderの欠損値をOne-Hot Encodingで埋める
     genderOneHot = pd.get_dummies(joined["gender"].fillna("NaN"))
     joined = joined.drop(columns=["gender"])
