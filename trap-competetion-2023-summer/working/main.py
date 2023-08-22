@@ -106,7 +106,7 @@ def preprocess(
         if scaler is None:
             scaler = preprocessing.StandardScaler()
             scaler.fit(x)
-        x = pd.DataFrame(scaler.transform(x), columns=x.columns)
+    x = pd.DataFrame(scaler.transform(x), columns=x.columns)
 
     x = pd.concat([x, genderOneHot, genreOneHot], axis=1)
 
