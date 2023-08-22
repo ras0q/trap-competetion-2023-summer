@@ -70,8 +70,9 @@ def train(
     val_preds = np.zeros(len(train_x))
     preds = []
 
-    kf = model_selection.KFold(n_splits=n_split, shuffle=True, random_state=42)
+    result_file = open(path.join(output_dir, "result.txt"), "w")
 
+    kf = model_selection.KFold(n_splits=n_split, shuffle=True, random_state=42)
     for i, (train_idx, val_idx) in enumerate(kf.split(train_x, train_y)):
         model = lgb.LGBMRegressor(
             objective="regression",
@@ -101,6 +102,7 @@ def train(
 
         val_loss = metrics.mean_squared_error(_val_y, val_pred)
         print(f"Fold {i + 1} MSE: {val_loss:.4f}")
+        result_file.write(f"Fold {i + 1} MSE: {val_loss:.4f}\n")
 
         lgb.plot_importance(
             model, importance_type="gain", title=f"Feature Importance - Fold {i + 1}"
@@ -109,8 +111,6 @@ def train(
 
         lgb.plot_metric(model)
         plt.savefig(path.join(output_dir, f"metric_{i + 1}.png"))
-
-        print("---------------")
 
     return val_preds, preds
 

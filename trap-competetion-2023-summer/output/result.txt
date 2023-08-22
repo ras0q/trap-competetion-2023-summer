@@ -1,0 +1,4 @@
+Fold 1 MSE: 4.1750
+Fold 2 MSE: 4.2926
+Fold 3 MSE: 4.2370
+Fold 4 MSE: 4.2455
