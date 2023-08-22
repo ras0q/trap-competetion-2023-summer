@@ -43,6 +43,9 @@ def preprocess(
     joined["birth_year"] = joined["birthday"].apply(_get_birth_year)
     joined = joined.drop(columns=["birthday"])
 
+    # start_day, end_dayを除外する
+    joined = joined.drop(columns=["start_day", "end_day"])
+
     # 1-12以外のstart_month,end_monthをNoneにする
     joined["start_month"] = joined["start_month"].apply(
         lambda x: x if x in range(1, 13) else None
