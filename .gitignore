@@ -161,3 +161,4 @@ cython_debug/
 
 # kaggle
 */input
+*/lightning_logs
