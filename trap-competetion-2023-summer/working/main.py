@@ -27,7 +27,6 @@ def preprocess(
     joined = base.merge(profile, on="user", how="left").merge(
         anime, left_on="anime_id", right_on="id", how="left"
     )
-    joined = joined.drop(columns=["id", "anime_id"])
 
     # 誕生年だけを抽出
     def _get_birth_year(birthday):
@@ -99,6 +98,9 @@ def preprocess(
         # TODO: type == objectの場合はとりあえずdropする
         elif type(rows[0]) == str:
             joined = joined.drop(columns=[col])
+
+    # idの削除
+    joined = joined.drop(columns=["id", "anime_id"])
 
     # 標準化
     x, y = joined, None
