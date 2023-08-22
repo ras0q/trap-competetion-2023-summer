@@ -153,7 +153,10 @@ def train(
         result_file.write(f"Fold {i + 1} MSE: {val_loss:.4f}\n")
 
         lgb.plot_importance(
-            model, importance_type="gain", title=f"Feature Importance - Fold {i + 1}"
+            model,
+            importance_type="gain",
+            title=f"Feature Importance - Fold {i + 1}",
+            max_num_features=10,
         )
         plt.savefig(path.join(output_dir, f"feature_importance_{i + 1}.png"))
 
@@ -192,11 +195,11 @@ if __name__ == "__main__":
         csv_test, csv_anime, csv_profile, is_train=False, scaler=scaler
     )
 
-    for col in train_x.columns:
-        if train_x[col].dtype != "uint8":
-            train_x[col].hist()
-            plt.savefig(path.join(output_dir, f"tmp_{col}.png"))
-            plt.clf()
+    # for col in train_x.columns:
+    #     if train_x[col].dtype != "uint8":
+    #         train_x[col].hist()
+    #         plt.savefig(path.join(output_dir, f"tmp_{col}.png"))
+    #         plt.clf()
 
     val_preds, preds = train(
         train_x,
