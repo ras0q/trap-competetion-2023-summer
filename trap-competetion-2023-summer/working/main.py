@@ -1,3 +1,4 @@
+import json
 import re
 from os import path
 
@@ -46,6 +47,15 @@ def preprocess(
     genderOneHot = pd.get_dummies(joined["gender"].fillna("NaN"))
     joined = joined.drop(columns=["gender"])
 
+    # genreをOne-Hot Encodingする
+    joined["genre"] = joined["genre"].apply(
+        lambda x: [] if type(x) != str else json.loads(x.replace("'", '"'))
+    )
+    mlb = preprocessing.MultiLabelBinarizer()
+    _genres = mlb.fit_transform(joined["genre"])
+    genreOneHot = pd.DataFrame(_genres, columns=mlb.classes_)
+    joined = joined.drop(columns=["genre"])
+
     # 残りの欠損値を平均で埋める
     for col in joined.columns:
         rows = joined[col]
@@ -64,7 +74,7 @@ def preprocess(
             scaler.fit(x)
         x = pd.DataFrame(scaler.transform(x), columns=x.columns)
 
-    x = pd.concat([x, genderOneHot], axis=1)
+    x = pd.concat([x, genderOneHot, genreOneHot], axis=1)
 
     return x, y, scaler
 
@@ -152,6 +162,8 @@ if __name__ == "__main__":
     test_x, _, _ = preprocess(
         csv_test, csv_anime, csv_profile, is_train=False, scaler=scaler
     )
+
+    print(train_x.iloc[0])
 
     val_preds, preds = train(
         train_x,
