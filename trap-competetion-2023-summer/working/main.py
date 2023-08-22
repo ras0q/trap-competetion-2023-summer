@@ -43,6 +43,14 @@ def preprocess(
     joined["birth_year"] = joined["birthday"].apply(_get_birth_year)
     joined = joined.drop(columns=["birthday"])
 
+    # 1-12以外のstart_month,end_monthをNoneにする
+    joined["start_month"] = joined["start_month"].apply(
+        lambda x: x if x in range(1, 13) else None
+    )
+    joined["end_month"] = joined["end_month"].apply(
+        lambda x: x if x in range(1, 13) else None
+    )
+
     # genderの欠損値をOne-Hot Encodingで埋める
     genderOneHot = pd.get_dummies(joined["gender"].fillna("NaN"))
     joined = joined.drop(columns=["gender"])
