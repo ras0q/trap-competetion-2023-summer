@@ -93,7 +93,7 @@ def preprocess(
     # 残りの欠損値を平均で埋める
     for col in joined.columns:
         rows = joined[col]
-        if type(rows[0]) == int or type(rows[0]) == float:
+        if rows.dtype == "int64" or rows.dtype == "float64":
             rows = rows.fillna(rows.mean(), inplace=True)
         # TODO: type == objectの場合はとりあえずdropする
         elif type(rows[0]) == str:
