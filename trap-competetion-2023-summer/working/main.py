@@ -64,7 +64,7 @@ def preprocess(
     )
 
     # genderの欠損値をOne-Hot Encodingで埋める
-    genderOneHot = pd.get_dummies(joined["gender"].fillna("NaN"))
+    genderOneHot = pd.get_dummies(joined["gender"].fillna("NaN"), dtype="uint8")
     joined = joined.drop(columns=["gender"])
 
     # genreをOne-Hot Encodingする
@@ -73,7 +73,7 @@ def preprocess(
     )
     mlb = preprocessing.MultiLabelBinarizer()
     _genres = mlb.fit_transform(joined["genre"])
-    genreOneHot = pd.DataFrame(_genres, columns=mlb.classes_)
+    genreOneHot = pd.DataFrame(_genres, columns=mlb.classes_, dtype="uint8")
     joined = joined.drop(columns=["genre"])
 
     # NOTE: FOR DEBUG
@@ -188,6 +188,12 @@ if __name__ == "__main__":
     test_x, _, _ = preprocess(
         csv_test, csv_anime, csv_profile, is_train=False, scaler=scaler
     )
+
+    for col in train_x.columns:
+        if train_x[col].dtype != "uint8":
+            train_x[col].hist()
+            plt.savefig(path.join(output_dir, f"tmp_{col}.png"))
+            plt.clf()
 
     val_preds, preds = train(
         train_x,
