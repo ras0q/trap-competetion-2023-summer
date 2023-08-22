@@ -24,6 +24,7 @@ def preprocess(
     joined = base.merge(profile, on="user", how="left").merge(
         anime, left_on="anime_id", right_on="id", how="left"
     )
+    joined = joined.drop(columns=["id", "anime_id"])
 
     # 誕生年だけを抽出
     def _get_birth_year(birthday):
@@ -43,7 +44,6 @@ def preprocess(
 
     # genderの欠損値をOne-Hot Encodingで埋める
     genderOneHot = pd.get_dummies(joined["gender"].fillna("NaN"))
-    joined = pd.concat([joined, genderOneHot], axis=1)
     joined = joined.drop(columns=["gender"])
 
     # 残りの欠損値を平均で埋める
@@ -55,15 +55,18 @@ def preprocess(
         elif type(rows[0]) == str:
             joined = joined.drop(columns=[col])
 
+    # 標準化
+    x, y = joined, None
     if is_train:
         x, y = joined.drop(columns=["score"]), joined["score"]
         if scaler is None:
             scaler = preprocessing.StandardScaler()
             scaler.fit(x)
-        return pd.DataFrame(scaler.transform(x), columns=x.columns), y, scaler
-    else:
-        x, y = joined, None
-        return pd.DataFrame(scaler.transform(x), columns=x.columns), y, scaler
+        x = pd.DataFrame(scaler.transform(x), columns=x.columns)
+
+    x = pd.concat([x, genderOneHot], axis=1)
+
+    return x, y, scaler
 
 
 def train(
