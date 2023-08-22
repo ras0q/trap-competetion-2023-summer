@@ -25,7 +25,6 @@ def preprocess(
     joined = base.merge(profile, on="user", how="left").merge(
         anime, left_on="anime_id", right_on="id", how="left"
     )
-    joined = joined.drop(columns=["id", "anime_id"])
 
     # 誕生年だけを抽出
     def _get_birth_year(birthday):
@@ -85,14 +84,20 @@ def preprocess(
     #     print(joined[col].describe())
     #     print("")
 
-    # 残りの欠損値を平均で埋める
+    # 残りの欠損値をanime_idごとの平均で埋める
     for col in joined.columns:
         rows = joined[col]
-        if type(rows[0]) == int or type(rows[0]) == float:
+        if col == "score":
+            _avg = joined.groupby("anime_id")["score"].mean()
+            joined["score"] = joined["anime_id"].apply(lambda x: _avg[x])
+        elif type(rows[0]) == int or type(rows[0]) == float:
             rows = rows.fillna(rows.mean(), inplace=True)
         # TODO: type == objectの場合はとりあえずdropする
         elif type(rows[0]) == str:
             joined = joined.drop(columns=[col])
+
+    # idの削除
+    joined = joined.drop(columns=["id", "anime_id"])
 
     # 標準化
     x, y = joined, None
