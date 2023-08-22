@@ -9,6 +9,9 @@ import pandas as pd
 from sklearn import metrics, model_selection, preprocessing
 
 SEED = 42
+episodes_large = 0
+members_small = 0
+score_by_anime_id: pd.Series = None
 
 
 def preprocess(
@@ -54,15 +57,19 @@ def preprocess(
     )
 
     # 大きすぎるepisodesをNoneにする
-    _episodes_large = joined["episodes"].quantile(0.99)
+    global episodes_large
+    if is_train:
+        episodes_large = joined["episodes"].quantile(0.99)
     joined["episodes"] = joined["episodes"].apply(
-        lambda x: x if x < _episodes_large else None
+        lambda x: x if x < episodes_large else None
     )
 
     # 小さすぎるmembersをNoneにする
-    _members_small = joined["members"].quantile(0.02)
+    global members_small
+    if is_train:
+        members_small = joined["members"].quantile(0.02)
     joined["members"] = joined["members"].apply(
-        lambda x: x if x > _members_small else None
+        lambda x: x if x > members_small else None
     )
 
     # genderの欠損値をOne-Hot Encodingで埋める
@@ -88,8 +95,10 @@ def preprocess(
     for col in joined.columns:
         rows = joined[col]
         if col == "score":
-            _avg = joined.groupby("anime_id")["score"].mean()
-            joined["score"] = joined["anime_id"].apply(lambda x: _avg[x])
+            global score_by_anime_id
+            if is_train:
+                score_by_anime_id = joined.groupby("anime_id")["score"].mean()
+            joined["score"] = joined["anime_id"].apply(lambda x: score_by_anime_id[x])
         elif type(rows[0]) == int or type(rows[0]) == float:
             rows = rows.fillna(rows.mean(), inplace=True)
         # TODO: type == objectの場合はとりあえずdropする
