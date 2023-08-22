@@ -57,6 +57,12 @@ def preprocess(
         lambda x: x if x < _episodes_large else None
     )
 
+    # 小さすぎるmembersをNoneにする
+    _members_small = joined["members"].quantile(0.02)
+    joined["members"] = joined["members"].apply(
+        lambda x: x if x > _members_small else None
+    )
+
     # genderの欠損値をOne-Hot Encodingで埋める
     genderOneHot = pd.get_dummies(joined["gender"].fillna("NaN"))
     joined = joined.drop(columns=["gender"])
@@ -69,6 +75,12 @@ def preprocess(
     _genres = mlb.fit_transform(joined["genre"])
     genreOneHot = pd.DataFrame(_genres, columns=mlb.classes_)
     joined = joined.drop(columns=["genre"])
+
+    # NOTE: FOR DEBUG
+    # for col in joined.columns:
+    #     print(col)
+    #     print(joined[col].describe())
+    #     print("")
 
     # 残りの欠損値を平均で埋める
     for col in joined.columns:
@@ -176,8 +188,6 @@ if __name__ == "__main__":
     test_x, _, _ = preprocess(
         csv_test, csv_anime, csv_profile, is_train=False, scaler=scaler
     )
-
-    print(train_x.iloc[0])
 
     val_preds, preds = train(
         train_x,
