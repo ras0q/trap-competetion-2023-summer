@@ -11,6 +11,7 @@ from sklearn import metrics, model_selection, preprocessing
 SEED = 42
 episodes_large = 0
 members_small = 0
+scaler = preprocessing.StandardScaler()
 
 
 def preprocess(
@@ -18,7 +19,6 @@ def preprocess(
     anime: pd.DataFrame,
     profile: pd.DataFrame,
     is_train: bool,
-    scaler: preprocessing.StandardScaler = None,
 ):
     # id が重複している謎のデータの削除
     anime = anime.drop_duplicates(subset="id")
@@ -106,14 +106,12 @@ def preprocess(
     x, y = joined, None
     if is_train:
         x, y = joined.drop(columns=["score"]), joined["score"]
-        if scaler is None:
-            scaler = preprocessing.StandardScaler()
-            scaler.fit(x)
+        scaler.fit(x)
     x = pd.DataFrame(scaler.transform(x), columns=x.columns)
 
     x = pd.concat([x, genderOneHot, genreOneHot], axis=1)
 
-    return x, y, scaler
+    return x, y
 
 
 def train(
@@ -196,12 +194,8 @@ if __name__ == "__main__":
     csv_profile = pd.read_csv(path.join(input_dir, "profile.csv"))
     csv_sample_sub = pd.read_csv(path.join(input_dir, "sample_submission.csv"))
 
-    train_x, train_y, scaler = preprocess(
-        csv_train, csv_anime, csv_profile, is_train=True
-    )
-    test_x, _, _ = preprocess(
-        csv_test, csv_anime, csv_profile, is_train=False, scaler=scaler
-    )
+    train_x, train_y = preprocess(csv_train, csv_anime, csv_profile, is_train=True)
+    test_x, _ = preprocess(csv_test, csv_anime, csv_profile, is_train=False)
 
     # for col in train_x.columns:
     #     if train_x[col].dtype != "uint8":
