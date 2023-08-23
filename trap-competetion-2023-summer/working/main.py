@@ -6,12 +6,16 @@ import lightgbm as lgb
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from sklearn import metrics, model_selection, preprocessing
+from sklearn import feature_extraction, metrics, model_selection, preprocessing
 
 SEED = 42
 episodes_large = 0
 members_small = 0
 scaler = preprocessing.StandardScaler()
+tfidf_title = feature_extraction.text.TfidfVectorizer(
+    max_features=100,
+    stop_words="english",
+)
 
 
 def preprocess(
@@ -35,7 +39,17 @@ def preprocess(
     joined["synopsis_word_count"] = (
         joined["synopsis"].fillna("").apply(lambda x: len(x.split()))
     )
-    joined = joined.drop(columns=["title", "synopsis"])
+
+    # titleをtfidfでベクトル化し、umapで次元削減
+    global tfidf_title
+    if is_train:
+        tfidf_title = tfidf_title.fit(joined["title"].fillna(""))
+    title_vecs = pd.DataFrame(
+        tfidf_title.transform(joined["title"].fillna("")).toarray(),
+        columns=[f"title_{i}" for i in tfidf_title.get_feature_names_out()],
+    )
+    joined = pd.concat([joined, title_vecs], axis=1)
+    joined = joined.drop(columns=["title"])
 
     # 誕生年だけを抽出
     def _get_birth_year(birthday):
