@@ -74,12 +74,27 @@ def preprocess(
     bert_array = np.zeros((len(joined), 768))
     for i, title_feature in enumerate(title_features):
         bert_array[i] = title_feature
-
     title_vecs = pd.DataFrame(
         svd.fit_transform(bert_array),
         columns=[f"title_{i}" for i in range(50)],
     )
     joined = pd.concat([joined, title_vecs], axis=1)
+
+    # synopsisをbertでベクトル化
+    synopsis_features: pd.Series = (
+        joined["synopsis"]
+        .fillna("")
+        .progress_apply(lambda x: bsv_parallel.module.forward(bsv.vectorize(x)))
+    )
+    joined = joined.drop(columns=["synopsis"])
+    bert_array = np.zeros((len(joined), 768))
+    for i, synopsis_feature in enumerate(synopsis_features):
+        bert_array[i] = synopsis_feature
+    synopsis_vecs = pd.DataFrame(
+        svd.fit_transform(bert_array),
+        columns=[f"synopsis_{i}" for i in range(50)],
+    )
+    joined = pd.concat([joined, synopsis_vecs], axis=1)
 
     # 誕生年だけを抽出
     def _get_birth_year(birthday):
@@ -256,7 +271,6 @@ if __name__ == "__main__":
     #         plt.savefig(path.join(output_dir, f"tmp_{col}.png"))
     #         plt.clf()
 
-    print(csv_sample_sub.shape, test_x.shape)
     val_preds, preds = train(
         train_x,
         train_y,
