@@ -30,7 +30,7 @@ class BertSequenceVectorizer(nn.Module):
 
     @cache
     def vectorize(self, sentence: str):
-        inp = self.tokenizer.encode(sentence)
+        inp = self.tokenizer.encode(sentence, max_length=1024, truncation=True)
         len_inp = len(inp)
 
         if len_inp >= self.max_len:
