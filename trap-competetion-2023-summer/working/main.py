@@ -33,7 +33,8 @@ bsv = bert.BertSequenceVectorizer()
 # print("DistributedDataParallel initialized.")
 bsv_parallel = nn.DataParallel(bsv)
 
-svd = decomposition.TruncatedSVD(n_components=50, random_state=SEED)
+svd_n_components = 50
+svd = decomposition.TruncatedSVD(n_components=svd_n_components, random_state=SEED)
 bert_array = np.zeros((1, 768))
 
 
@@ -76,7 +77,7 @@ def preprocess(
         bert_array[i] = title_feature
     title_vecs = pd.DataFrame(
         svd.fit_transform(bert_array),
-        columns=[f"title_{i}" for i in range(50)],
+        columns=[f"title_{i}" for i in range(svd_n_components)],
     )
     joined = pd.concat([joined, title_vecs], axis=1)
 
@@ -92,7 +93,7 @@ def preprocess(
         bert_array[i] = synopsis_feature
     synopsis_vecs = pd.DataFrame(
         svd.fit_transform(bert_array),
-        columns=[f"synopsis_{i}" for i in range(50)],
+        columns=[f"synopsis_{i}" for i in range(svd_n_components)],
     )
     joined = pd.concat([joined, synopsis_vecs], axis=1)
 
