@@ -2,20 +2,39 @@ import json
 import re
 from os import path
 
+import bert
 import lightgbm as lgb
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from sklearn import feature_extraction, metrics, model_selection, preprocessing
+from sklearn import decomposition, metrics, model_selection, preprocessing
+from torch import nn
+from tqdm import tqdm
+
+tqdm.pandas()
 
 SEED = 42
+
 episodes_large = 0
 members_small = 0
 scaler = preprocessing.StandardScaler()
-tfidf_title = feature_extraction.text.TfidfVectorizer(
-    max_features=100,
-    stop_words="english",
-)
+
+# BSV as DistributedDataParallel
+bsv = bert.BertSequenceVectorizer()
+# cuda.set_device(0)
+# os.environ["MASTER_ADDR"] = "localhost"
+# os.environ["MASTER_PORT"] = "12355"
+# os.environ["NCCL_P2P_DISABLE"] = "1"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
+# rank = 0
+# world_size = cuda.device_count()
+# distributed.init_process_group("nccl", rank=rank, world_size=world_size)
+# bsv_parallel = nn.parallel.DistributedDataParallel(bsv)
+# print("DistributedDataParallel initialized.")
+bsv_parallel = nn.DataParallel(bsv)
+
+svd = decomposition.TruncatedSVD(n_components=50, random_state=SEED)
+bert_array = np.zeros((1, 768))
 
 
 def preprocess(
@@ -40,16 +59,27 @@ def preprocess(
         joined["synopsis"].fillna("").apply(lambda x: len(x.split()))
     )
 
-    # titleをtfidfでベクトル化し、umapで次元削減
-    global tfidf_title
-    if is_train:
-        tfidf_title = tfidf_title.fit(joined["title"].fillna(""))
+    # titleをbertでベクトル化
+    global bsv_parallel
+    global svd
+    global bert_array
+    title_features: pd.Series = (
+        joined["title"]
+        .fillna("")
+        .progress_apply(
+            lambda x: bsv_parallel.module.forward(bsv.vectorize(x))
+        )  # TODO: 生のmoduleを使った方が速い、本来はDataParallelを使うべき
+    )
+    joined = joined.drop(columns=["title"])
+    bert_array = np.zeros((len(joined), 768))
+    for i, title_feature in enumerate(title_features):
+        bert_array[i] = title_feature
+
     title_vecs = pd.DataFrame(
-        tfidf_title.transform(joined["title"].fillna("")).toarray(),
-        columns=[f"title_{i}" for i in tfidf_title.get_feature_names_out()],
+        svd.fit_transform(bert_array),
+        columns=[f"title_{i}" for i in range(50)],
     )
     joined = pd.concat([joined, title_vecs], axis=1)
-    joined = joined.drop(columns=["title"])
 
     # 誕生年だけを抽出
     def _get_birth_year(birthday):
@@ -226,6 +256,7 @@ if __name__ == "__main__":
     #         plt.savefig(path.join(output_dir, f"tmp_{col}.png"))
     #         plt.clf()
 
+    print(csv_sample_sub.shape, test_x.shape)
     val_preds, preds = train(
         train_x,
         train_y,
