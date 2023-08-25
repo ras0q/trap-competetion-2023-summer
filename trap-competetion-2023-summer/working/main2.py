@@ -52,6 +52,21 @@ def preprocess(
     # rankedの欠損値を平均で補完
     joined["ranked"] = joined["ranked"].fillna(joined["ranked"].mean())
 
+    # genreのダミー化
+    genres = (
+        pd.get_dummies(
+            joined["genre"].apply(eval).apply(pd.Series).stack(),
+            prefix="genre_",
+            dtype="uint8",
+        )
+        .groupby(level=0)
+        .sum()
+    )
+    joined = pd.concat(
+        [joined, genres],
+        axis=1,
+    )
+
     # 標準化
     standardized_columns = ["ranked", "popularity", "birth_year", "members"]
     if is_train:
@@ -66,6 +81,16 @@ def preprocess(
         "birth_year",
         "members",
     ]
+
+    # 分布,相関係数の可視化
+    if is_train:
+        cp = san.CustomPairPlot()
+        cp.pairanalyzer(joined[x_valid_columns + ["score"]], diag_kind="hist")
+        plt.savefig(path.join(output_dir, "pairplot.png"))
+        plt.clf()
+
+    # 追加のダミーカラム
+    x_valid_columns += genres.columns.tolist()
 
     x = joined[x_valid_columns]
     y = joined["score"] if is_train else None
@@ -122,7 +147,7 @@ def train_predict(
         test_pred = model.predict(test_x)
         test_preds.append(test_pred)
 
-        lgb.plot_importance(model, importance_type="gain", max_num_features=20)
+        lgb.plot_importance(model, importance_type="gain", max_num_features=15)
         plt.savefig(path.join(output_dir, f"feature_importance_{i + 1}.png"))
 
         lgb.plot_metric(model)
@@ -155,12 +180,6 @@ if __name__ == "__main__":
 
     train_x, train_y = preprocess(csv_train, csv_anime, csv_profile, is_train=True)
     test_x, _ = preprocess(csv_test, csv_anime, csv_profile, is_train=False)
-
-    # 分布,相関係数の可視化
-    cp = san.CustomPairPlot()
-    cp.pairanalyzer(pd.concat([train_x, train_y], axis=1), diag_kind="hist")
-    plt.savefig(path.join(output_dir, "pairplot.png"))
-    plt.clf()
 
     val_preds, test_preds = train_predict(
         train_x, train_y, test_x, output_dir, n_split=5
