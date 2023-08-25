@@ -18,6 +18,9 @@ def preprocess(
     profile: pd.DataFrame,
     is_train: bool,
 ):
+    # 欠損値を表示
+    print(f"is_train: {is_train}, isnull().sum:\n{base.isnull().sum()}")
+
     # userを整数でラベル化
     le = pp.LabelEncoder()
     base["user_label"] = le.fit_transform(base["user"])
