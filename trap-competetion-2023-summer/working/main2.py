@@ -58,7 +58,14 @@ def preprocess(
         scaler.fit(joined[standardized_columns])
     joined[standardized_columns] = scaler.transform(joined[standardized_columns])
 
-    x_valid_columns = ["user_label", "ranked", "popularity", "birth_year", "members"]
+    x_valid_columns = [
+        "user_label",
+        "anime_id",
+        "ranked",
+        "popularity",
+        "birth_year",
+        "members",
+    ]
 
     x = joined[x_valid_columns]
     y = joined["score"] if is_train else None
