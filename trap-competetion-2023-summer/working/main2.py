@@ -67,12 +67,23 @@ def preprocess(
         axis=1,
     )
 
+    # genderのダミー化
+    genders = pd.get_dummies(
+        joined["gender"].fillna("NaN"), prefix="gender_", dtype="uint8"
+    )
+    joined = pd.concat(
+        [joined, genders],
+        axis=1,
+    )
+
     # 標準化
     standardized_columns = ["ranked", "popularity", "birth_year", "members"]
     if is_train:
         scaler.fit(joined[standardized_columns])
     joined[standardized_columns] = scaler.transform(joined[standardized_columns])
 
+    # 使用するカラムのリスト
+    # 分布を表示しないものは後に追加する
     x_valid_columns = [
         "user_label",
         "anime_id",
@@ -90,7 +101,7 @@ def preprocess(
         plt.clf()
 
     # 追加のダミーカラム
-    x_valid_columns += genres.columns.tolist()
+    x_valid_columns += genres.columns.tolist() + genders.columns.tolist()
 
     x = joined[x_valid_columns]
     y = joined["score"] if is_train else None
