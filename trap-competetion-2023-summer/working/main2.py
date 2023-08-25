@@ -47,10 +47,12 @@ def preprocess(
         lambda x: x if x >= 1935 else None
     )
     # 欠損値を平均で補完
-    joined["birth_year"] = joined["birth_year"].fillna(joined["birth_year"].mean())
+    _birth_year_mean = joined["birth_year"].mean()
+    joined["birth_year"] = joined["birth_year"].fillna(_birth_year_mean)
 
     # rankedの欠損値を平均で補完
-    joined["ranked"] = joined["ranked"].fillna(joined["ranked"].mean())
+    _ranked_mean = joined["ranked"].mean()
+    joined["ranked"] = joined["ranked"].fillna(_ranked_mean)
 
     # episodesの欠損値を中央値で補完
     _episode_median = joined["episodes"].median()
