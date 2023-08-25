@@ -38,12 +38,12 @@ def preprocess(
     joined["ranked"] = joined["ranked"].fillna(joined["ranked"].mean())
 
     # 標準化
-    standardized_columns = ["ranked"]
+    standardized_columns = ["ranked", "popularity"]
     if is_train:
         scaler.fit(joined[standardized_columns])
     joined[standardized_columns] = scaler.transform(joined[standardized_columns])
 
-    x_valid_columns = ["user_label", "ranked"]
+    x_valid_columns = ["user_label", "ranked", "popularity"]
 
     x = joined[x_valid_columns]
     y = joined["score"] if is_train else None
