@@ -97,6 +97,9 @@ def preprocess(
     # )
     # joined = pd.concat([joined, synopsis_vecs], axis=1)
 
+    # TODO: BERTを復活させたら消す
+    joined = joined.drop(columns=["title", "synopsis"])
+
     # 誕生年だけを抽出
     def _get_birth_year(birthday):
         if type(birthday) != str:
@@ -163,13 +166,15 @@ def preprocess(
     for col in joined.columns:
         rows = joined[col]
         if rows.dtype == "int64" or rows.dtype == "float64":
-            rows = rows.fillna(rows.mean(), inplace=True)
-        # TODO: type == objectの場合はとりあえずdropする
-        elif type(rows[0]) == str:
-            joined = joined.drop(columns=[col])
+            joined[col] = rows.fillna(rows.mean())
 
     # idの削除
-    joined = joined.drop(columns=["id", "anime_id"])
+    joined = joined.drop(columns=["user", "id", "anime_id"])
+
+    # TODO: dtype == objectはとりあえずdropする
+    for col in joined.columns:
+        if joined[col].dtype == "object":
+            joined = joined.drop(columns=[col])
 
     # 標準化
     x, y = joined, None
