@@ -27,15 +27,16 @@ def preprocess(
     )
 
     # 欠損値を表示
-    print(f"is_train: {is_train}, isnull().sum:\n{joined.isnull()()}")
+    print(f"is_train: {is_train}, isnull().sum:\n{joined.isnull().sum()}")
 
     # userを整数でラベル化
     le = pp.LabelEncoder()
     joined["user_label"] = le.fit_transform(joined["user"])
 
-    x_valid_columns = [
-        "user_label",
-    ]
+    # rankedの欠損値を平均で補完
+    joined["ranked"] = joined["ranked"].fillna(joined["ranked"].mean())
+
+    x_valid_columns = ["user_label", "ranked"]
 
     x = joined[x_valid_columns]
     y = joined["score"] if is_train else None
