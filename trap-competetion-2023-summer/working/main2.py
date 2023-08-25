@@ -52,6 +52,10 @@ def preprocess(
     # rankedの欠損値を平均で補完
     joined["ranked"] = joined["ranked"].fillna(joined["ranked"].mean())
 
+    # episodesの欠損値を中央値で補完
+    _episode_median = joined["episodes"].median()
+    joined["episodes"] = joined["episodes"].fillna(_episode_median)
+
     # genreのダミー化
     genres = (
         pd.get_dummies(
@@ -77,7 +81,7 @@ def preprocess(
     )
 
     # 標準化
-    standardized_columns = ["ranked", "popularity", "birth_year", "members"]
+    standardized_columns = ["ranked", "popularity", "birth_year", "members", "episodes"]
     if is_train:
         scaler.fit(joined[standardized_columns])
     joined[standardized_columns] = scaler.transform(joined[standardized_columns])
@@ -91,6 +95,7 @@ def preprocess(
         "popularity",
         "birth_year",
         "members",
+        "episodes",
     ]
 
     # 分布,相関係数の可視化
