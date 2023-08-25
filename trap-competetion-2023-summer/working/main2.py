@@ -18,19 +18,27 @@ def preprocess(
     profile: pd.DataFrame,
     is_train: bool,
 ):
+    # id が重複している謎のデータの削除
+    anime = anime.drop_duplicates(subset="id")
+
+    # 列のマージ
+    joined = base.merge(profile, on="user", how="left").merge(
+        anime, left_on="anime_id", right_on="id", how="left"
+    )
+
     # 欠損値を表示
-    print(f"is_train: {is_train}, isnull().sum:\n{base.isnull().sum()}")
+    print(f"is_train: {is_train}, isnull().sum:\n{joined.isnull()()}")
 
     # userを整数でラベル化
     le = pp.LabelEncoder()
-    base["user_label"] = le.fit_transform(base["user"])
+    joined["user_label"] = le.fit_transform(joined["user"])
 
     x_valid_columns = [
         "user_label",
     ]
 
-    x = base[x_valid_columns]
-    y = base["score"] if is_train else None
+    x = joined[x_valid_columns]
+    y = joined["score"] if is_train else None
 
     return x, y
 
