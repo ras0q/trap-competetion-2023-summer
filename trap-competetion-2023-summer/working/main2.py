@@ -88,7 +88,7 @@ def train_predict(
         val_preds.append(val_pred)
 
         val_loss = mt.mean_squared_error(_val_y, val_pred)
-        msg = f"fold {i}: {val_loss}"
+        msg = f"fold {i}: {val_loss:.5f}"
         print(msg)
         result_file.write(msg + "\n")
 
