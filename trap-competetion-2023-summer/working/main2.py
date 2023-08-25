@@ -2,6 +2,7 @@ from os import path
 
 import lightgbm as lgb
 import matplotlib.pyplot as plt
+import myutil
 import numpy as np
 import pandas as pd
 import seaborn_analyzer as san
@@ -35,16 +36,20 @@ def preprocess(
     le = pp.LabelEncoder()
     joined["user_label"] = le.fit_transform(joined["user"])
 
+    # birthdayから誕生年(birth_year)を生成 & 欠損値を平均で補完
+    joined["birth_year"] = joined["birthday"].apply(myutil.get_birth_year)
+    joined["birth_year"] = joined["birth_year"].fillna(joined["birth_year"].mean())
+
     # rankedの欠損値を平均で補完
     joined["ranked"] = joined["ranked"].fillna(joined["ranked"].mean())
 
     # 標準化
-    standardized_columns = ["ranked", "popularity"]
+    standardized_columns = ["ranked", "popularity", "birth_year"]
     if is_train:
         scaler.fit(joined[standardized_columns])
     joined[standardized_columns] = scaler.transform(joined[standardized_columns])
 
-    x_valid_columns = ["user_label", "ranked", "popularity"]
+    x_valid_columns = ["user_label", "ranked", "popularity", "birth_year"]
 
     x = joined[x_valid_columns]
     y = joined["score"] if is_train else None
