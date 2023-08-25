@@ -116,9 +116,6 @@ def preprocess(
     joined["birth_year"] = joined["birthday"].apply(_get_birth_year)
     joined = joined.drop(columns=["birthday"])
 
-    # start_day, end_dayを除外する
-    joined = joined.drop(columns=["start_day", "end_day"])
-
     # 1-12以外のstart_month,end_monthをNoneにする
     joined["start_month"] = joined["start_month"].apply(
         lambda x: x if x in range(1, 13) else None
@@ -162,14 +159,15 @@ def preprocess(
     #     print(joined[col].describe())
     #     print("")
 
+    # 不用なカラムの削除
+    joined = joined.drop(columns=["start_day", "end_day"])
+
     # 欠損値の処理
     for col in joined.columns:
         rows = joined[col]
         if col in [
-            "start_day",
             "start_month",
             "start_year",
-            "end_day",
             "end_month",
             "end_year",
         ]:
@@ -280,6 +278,21 @@ if __name__ == "__main__":
 
     train_x, train_y = preprocess(csv_train, csv_anime, csv_profile, is_train=True)
     test_x, _ = preprocess(csv_test, csv_anime, csv_profile, is_train=False)
+
+    # train_xとtrain_yの相関を見る
+    fig = plt.figure(figsize=(20, 20 * 2))
+    for i, col in enumerate(train_x.columns):
+        plt.subplot(len(train_x.columns) // 5 + 1, 5, i + 1)
+        plt.scatter(train_x[col], train_y, s=0.5)
+        plt.xlabel(col)
+        plt.ylabel("score")
+        plt.title(
+            f"corr: {np.corrcoef(train_x[col], train_y)[0, 1]:.4f}, "
+            f"nan_rate: {train_x[col].isnull().sum() / len(train_x[col]):.4f}"
+        )
+    plt.tight_layout()
+    plt.savefig(path.join(output_dir, "tmp_correlation.png"))
+    plt.clf()
 
     # for col in train_x.columns:
     #     if train_x[col].dtype != "uint8":
