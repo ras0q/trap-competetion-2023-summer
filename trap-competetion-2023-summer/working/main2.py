@@ -32,6 +32,10 @@ def preprocess(
     # 欠損値を表示
     print(f"is_train: {is_train}, isnull().sum:\n{joined.isnull().sum()}")
 
+    # 範囲外のscoreを含む行を削除
+    if is_train:
+        joined = joined[(joined["score"] >= 1) & (joined["score"] <= 10)]
+
     # userを整数でラベル化
     le = pp.LabelEncoder()
     joined["user_label"] = le.fit_transform(joined["user"])
