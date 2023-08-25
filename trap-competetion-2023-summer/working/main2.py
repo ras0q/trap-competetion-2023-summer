@@ -1,12 +1,13 @@
 from os import path
 
 import lightgbm as lgb
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import seaborn_analyzer as san
 import sklearn.metrics as mt
 import sklearn.model_selection as ms
 import sklearn.preprocessing as pp
-from matplotlib import pyplot as plt
 
 # global variables
 SEED = 42
@@ -128,6 +129,11 @@ if __name__ == "__main__":
 
     train_x, train_y = preprocess(csv_train, csv_anime, csv_profile, is_train=True)
     test_x, _ = preprocess(csv_test, csv_anime, csv_profile, is_train=False)
+
+    # 分布,相関係数の可視化
+    cp = san.CustomPairPlot()
+    cp.pairanalyzer(pd.concat([train_x, train_y], axis=1), diag_kind="hist")
+    plt.savefig(path.join(output_dir, "pairplot.png"))
 
     val_preds, test_preds = train_predict(
         train_x, train_y, test_x, output_dir, n_split=5
