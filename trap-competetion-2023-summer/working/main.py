@@ -162,10 +162,20 @@ def preprocess(
     #     print(joined[col].describe())
     #     print("")
 
-    # 残りの欠損値を平均で埋める
+    # 欠損値の処理
     for col in joined.columns:
         rows = joined[col]
-        if rows.dtype == "int64" or rows.dtype == "float64":
+        if col in [
+            "start_day",
+            "start_month",
+            "start_year",
+            "end_day",
+            "end_month",
+            "end_year",
+        ]:
+            joined[col] = rows.fillna(-1)
+        # 平均で埋める
+        elif rows.dtype == "int64" or rows.dtype == "float64":
             joined[col] = rows.fillna(rows.mean())
 
     # idの削除
