@@ -40,8 +40,13 @@ def preprocess(
     le = pp.LabelEncoder()
     joined["user_label"] = le.fit_transform(joined["user"])
 
-    # birthdayから誕生年(birth_year)を生成 & 欠損値を平均で補完
+    # birthdayから誕生年(birth_year)を生成
     joined["birth_year"] = joined["birthday"].apply(myutil.get_birth_year)
+    # 1935年以前のデータは適当に設定したと思われるので削除
+    joined["birth_year"] = joined["birth_year"].apply(
+        lambda x: x if x >= 1935 else None
+    )
+    # 欠損値を平均で補完
     joined["birth_year"] = joined["birth_year"].fillna(joined["birth_year"].mean())
 
     # rankedの欠損値を平均で補完
