@@ -65,7 +65,6 @@ def train_predict(
         random_state=SEED,
         n_estimators=10000,
         verbose=-1,
-        early_stopping_round=50,
     )
 
     val_preds = []
@@ -83,6 +82,9 @@ def train_predict(
             _train_x,
             _train_y,
             eval_set=[(_val_x, _val_y), (_train_x, _train_y)],
+            callbacks=[
+                lgb.early_stopping(50, first_metric_only=True, verbose=True)
+            ]
         )
 
         val_pred = model.predict(_val_x)
