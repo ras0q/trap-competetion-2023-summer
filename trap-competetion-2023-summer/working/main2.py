@@ -64,6 +64,7 @@ def train_predict(
         metric="mse",
         random_state=SEED,
         n_estimators=10000,
+        num_leaves=8,
         verbose=-1,
     )
 
@@ -72,6 +73,10 @@ def train_predict(
     result_file = open(path.join(output_dir, "result.txt"), "w")
 
     kf = ms.KFold(n_splits=n_split, shuffle=True, random_state=SEED)
+
+    # import debug
+    # debug.plot_validation_curve(model, train_x, train_y, output_dir, cv=kf)
+
     for i, (train_idx, val_idx) in enumerate(kf.split(train_x, train_y)):
         _train_x = train_x.iloc[train_idx]
         _train_y = train_y.iloc[train_idx]
@@ -82,9 +87,7 @@ def train_predict(
             _train_x,
             _train_y,
             eval_set=[(_val_x, _val_y), (_train_x, _train_y)],
-            callbacks=[
-                lgb.early_stopping(50, first_metric_only=True, verbose=True)
-            ]
+            callbacks=[lgb.early_stopping(50, first_metric_only=True, verbose=True)],
         )
 
         val_pred = model.predict(_val_x)
@@ -136,6 +139,7 @@ if __name__ == "__main__":
     cp = san.CustomPairPlot()
     cp.pairanalyzer(pd.concat([train_x, train_y], axis=1), diag_kind="hist")
     plt.savefig(path.join(output_dir, "pairplot.png"))
+    plt.clf()
 
     val_preds, test_preds = train_predict(
         train_x, train_y, test_x, output_dir, n_split=5
