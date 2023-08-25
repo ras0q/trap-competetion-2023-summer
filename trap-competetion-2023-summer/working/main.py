@@ -60,42 +60,42 @@ def preprocess(
         joined["synopsis"].fillna("").apply(lambda x: len(x.split()))
     )
 
-    # titleをbertでベクトル化
-    global bsv_parallel
-    global svd
-    global bert_array
-    title_features: pd.Series = (
-        joined["title"]
-        .fillna("")
-        .progress_apply(
-            lambda x: bsv_parallel.module.forward(bsv.vectorize(x))
-        )  # TODO: 生のmoduleを使った方が速い、本来はDataParallelを使うべき
-    )
-    joined = joined.drop(columns=["title"])
-    bert_array = np.zeros((len(joined), 768))
-    for i, title_feature in enumerate(title_features):
-        bert_array[i] = title_feature
-    title_vecs = pd.DataFrame(
-        svd.fit_transform(bert_array),
-        columns=[f"title_{i}" for i in range(svd_n_components)],
-    )
-    joined = pd.concat([joined, title_vecs], axis=1)
+    # # titleをbertでベクトル化
+    # global bsv_parallel
+    # global svd
+    # global bert_array
+    # title_features: pd.Series = (
+    #     joined["title"]
+    #     .fillna("")
+    #     .progress_apply(
+    #         lambda x: bsv_parallel.module.forward(bsv.vectorize(x))
+    #     )  # TODO: 生のmoduleを使った方が速い、本来はDataParallelを使うべき
+    # )
+    # joined = joined.drop(columns=["title"])
+    # bert_array = np.zeros((len(joined), 768))
+    # for i, title_feature in enumerate(title_features):
+    #     bert_array[i] = title_feature
+    # title_vecs = pd.DataFrame(
+    #     svd.fit_transform(bert_array),
+    #     columns=[f"title_{i}" for i in range(svd_n_components)],
+    # )
+    # joined = pd.concat([joined, title_vecs], axis=1)
 
-    # synopsisをbertでベクトル化
-    synopsis_features: pd.Series = (
-        joined["synopsis"]
-        .fillna("")
-        .progress_apply(lambda x: bsv_parallel.module.forward(bsv.vectorize(x)))
-    )
-    joined = joined.drop(columns=["synopsis"])
-    bert_array = np.zeros((len(joined), 768))
-    for i, synopsis_feature in enumerate(synopsis_features):
-        bert_array[i] = synopsis_feature
-    synopsis_vecs = pd.DataFrame(
-        svd.fit_transform(bert_array),
-        columns=[f"synopsis_{i}" for i in range(svd_n_components)],
-    )
-    joined = pd.concat([joined, synopsis_vecs], axis=1)
+    # # synopsisをbertでベクトル化
+    # synopsis_features: pd.Series = (
+    #     joined["synopsis"]
+    #     .fillna("")
+    #     .progress_apply(lambda x: bsv_parallel.module.forward(bsv.vectorize(x)))
+    # )
+    # joined = joined.drop(columns=["synopsis"])
+    # bert_array = np.zeros((len(joined), 768))
+    # for i, synopsis_feature in enumerate(synopsis_features):
+    #     bert_array[i] = synopsis_feature
+    # synopsis_vecs = pd.DataFrame(
+    #     svd.fit_transform(bert_array),
+    #     columns=[f"synopsis_{i}" for i in range(svd_n_components)],
+    # )
+    # joined = pd.concat([joined, synopsis_vecs], axis=1)
 
     # 誕生年だけを抽出
     def _get_birth_year(birthday):
