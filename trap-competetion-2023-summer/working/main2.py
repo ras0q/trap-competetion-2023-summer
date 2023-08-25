@@ -10,6 +10,7 @@ from matplotlib import pyplot as plt
 
 # global variables
 SEED = 42
+scaler = pp.StandardScaler()
 
 
 def preprocess(
@@ -35,6 +36,12 @@ def preprocess(
 
     # rankedの欠損値を平均で補完
     joined["ranked"] = joined["ranked"].fillna(joined["ranked"].mean())
+
+    # 標準化
+    standardized_columns = ["ranked"]
+    if is_train:
+        scaler.fit(joined[standardized_columns])
+    joined[standardized_columns] = scaler.transform(joined[standardized_columns])
 
     x_valid_columns = ["user_label", "ranked"]
 
