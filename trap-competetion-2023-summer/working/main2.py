@@ -149,6 +149,10 @@ def train_predict(
         random_state=SEED,
         n_estimators=10000,
         num_leaves=8,
+        min_child_samples=5,
+        colsample_bytree=0.8,
+        reg_alpha=0.3,
+        reg_lambda=0.3,
         verbose=-1,
     )
 
@@ -159,7 +163,9 @@ def train_predict(
     kf = ms.KFold(n_splits=n_split, shuffle=True, random_state=SEED)
 
     # import debug
-    # debug.plot_validation_curve(model, train_x, train_y, output_dir, cv=kf)
+    # debug.plot_validation_curve(
+    #     model, train_x, train_y, output_dir, cv=kf, random_state=SEED
+    # )
 
     for i, (train_idx, val_idx) in enumerate(kf.split(train_x, train_y)):
         _train_x = train_x.iloc[train_idx]
