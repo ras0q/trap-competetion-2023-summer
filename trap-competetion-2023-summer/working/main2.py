@@ -58,19 +58,22 @@ def preprocess(
     _episode_median = joined["episodes"].median()
     joined["episodes"] = joined["episodes"].fillna(_episode_median)
 
-    # yearが欠損しているときはmonthに入っていることがあるので補完する
-    # monthも欠損しているときは平均で補完
+    # yearとmonthを結合してstart_ym,end_ymを生成
+    # ym = (year - 1900) * 12 + month
+    # yearが欠損しているときはmonthに入っていることがある (monthも欠損しているときは平均で補完)
+    # monthの欠損値は6で補完
     for p in ["start", "end"]:
-        _year_mean = joined[f"{p}_year"].mean()
-        for i, row in joined[joined[f"{p}_year"].isnull()].iterrows():
-            if row[f"{p}_month"] is not None and row[f"{p}_month"] >= 1900:
-                joined.loc[i, f"{p}_year"] = row[f"{p}_month"]
-                joined.loc[i, f"{p}_month"] = None
+        _year_mean = round(joined[f"{p}_year"].mean())
+        for i, row in joined.iterrows():
+            _y, _m = row[f"{p}_year"], row[f"{p}_month"]
+            if _y is None:
+                joined.loc[i, f"{p}_ym"] = (
+                    (_m if _m >= 1900 else _year_mean) - 1900
+                ) * 12 + 6
             else:
-                joined.loc[i, f"{p}_year"] = _year_mean
-
-        # start_month,end_monthの欠損値を-1で補完
-        joined[f"{p}_month"] = joined[f"{p}_month"].fillna(-1)
+                joined.loc[i, f"{p}_ym"] = (_y - 1900) * 12 + (
+                    _m if 1 <= _m <= 12 else 6
+                )
 
     # genreのダミー化
     genres = (
@@ -107,10 +110,8 @@ def preprocess(
         "birth_year",
         "members",
         "episodes",
-        "start_year",
-        "start_month",
-        "end_year",
-        "end_month",
+        "start_ym",
+        "end_ym",
     ]
     if is_train:
         scaler.fit(joined[standardized_columns])
@@ -126,10 +127,8 @@ def preprocess(
         "birth_year",
         "members",
         "episodes",
-        "start_year",
-        "start_month",
-        "end_year",
-        "end_month",
+        "start_ym",
+        "end_ym",
     ]
 
     # 分布,相関係数の可視化
