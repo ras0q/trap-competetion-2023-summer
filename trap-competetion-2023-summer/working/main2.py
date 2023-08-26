@@ -72,36 +72,40 @@ def preprocess_anime(anime: pd.DataFrame):
         axis=1,
     )
 
-    # titleをBERTでベクトル化
+    # synopsisをBERTでベクトル化
     # NOTE: この処理は時間がかかるのでpickleで保存しておく
-    pickle_path = path.join(path.dirname(__file__), "__pycache__", "title_features.pkl")
-    title_features: pd.Series = None
-    title_vecs: pd.DataFrame = None
+    pickle_path = path.join(
+        path.dirname(__file__), "__pycache__", "synopsis_features.pkl"
+    )
+    synopsis_features: pd.Series = None
+    synopsis_vecs: pd.DataFrame = None
     if path.exists(pickle_path):
-        title_features = pickle.load(open(pickle_path, "rb"))
+        synopsis_features = pickle.load(open(pickle_path, "rb"))
     else:
         bsv = bert.BertSequenceVectorizer()
-        title_features = (
-            anime["title"]
+        synopsis_features = (
+            anime["synopsis"]
             .fillna("NaN")
             .progress_apply(lambda x: bsv.forward(bsv.vectorize(x)))
         )
         pickle.dump(
-            title_features,
+            synopsis_features,
             open(pickle_path, "wb"),
         )
-    pickle_path = path.join(path.dirname(__file__), "__pycache__", "title_vecs.pkl")
+    n_components = 2
+    pickle_path = path.join(
+        path.dirname(__file__), "__pycache__", f"synopsis_vecs_{n_components}.pkl"
+    )
     if path.exists(pickle_path):
-        title_vecs = pickle.load(open(pickle_path, "rb"))
+        synopsis_vecs = pickle.load(open(pickle_path, "rb"))
     else:
-        n_components = 3
         tsne = mf.TSNE(n_components=n_components, random_state=SEED)
-        title_vecs = pd.DataFrame(
-            tsne.fit_transform(np.vstack(title_features)),
-            columns=[f"title_{i}" for i in range(n_components)],
+        synopsis_vecs = pd.DataFrame(
+            tsne.fit_transform(np.vstack(synopsis_features)),
+            columns=[f"synopsis_{i}" for i in range(n_components)],
         )
-        pickle.dump(title_vecs, open(pickle_path, "wb"))
-    anime = pd.concat([anime, title_vecs], axis=1)
+        pickle.dump(synopsis_vecs, open(pickle_path, "wb"))
+    anime = pd.concat([anime, synopsis_vecs], axis=1)
 
     # 標準化
     standardized_columns = [
