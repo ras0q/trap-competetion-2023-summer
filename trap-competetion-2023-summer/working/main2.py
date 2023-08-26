@@ -1,19 +1,25 @@
+import pickle
 import threading
 from os import path
 
+import bert
 import lightgbm as lgb
 import matplotlib.pyplot as plt
 import myutil
 import numpy as np
 import pandas as pd
 import seaborn_analyzer as san
+import sklearn.manifold as mf
 import sklearn.metrics as mt
 import sklearn.model_selection as ms
 import sklearn.preprocessing as pp
+import tqdm
 
 # global variables
 SEED = 42
 scaler = pp.StandardScaler()
+
+tqdm.tqdm.pandas()
 
 
 def preprocess_anime(anime: pd.DataFrame):
@@ -65,6 +71,37 @@ def preprocess_anime(anime: pd.DataFrame):
         [anime, genres],
         axis=1,
     )
+
+    # titleをBERTでベクトル化
+    # NOTE: この処理は時間がかかるのでpickleで保存しておく
+    pickle_path = path.join(path.dirname(__file__), "__pycache__", "title_features.pkl")
+    title_features: pd.Series = None
+    title_vecs: pd.DataFrame = None
+    if path.exists(pickle_path):
+        title_features = pickle.load(open(pickle_path, "rb"))
+    else:
+        bsv = bert.BertSequenceVectorizer()
+        title_features = (
+            anime["title"]
+            .fillna("NaN")
+            .progress_apply(lambda x: bsv.forward(bsv.vectorize(x)))
+        )
+        pickle.dump(
+            title_features,
+            open(pickle_path, "wb"),
+        )
+    pickle_path = path.join(path.dirname(__file__), "__pycache__", "title_vecs.pkl")
+    if path.exists(pickle_path):
+        title_vecs = pickle.load(open(pickle_path, "rb"))
+    else:
+        n_components = 3
+        tsne = mf.TSNE(n_components=n_components, random_state=SEED)
+        title_vecs = pd.DataFrame(
+            tsne.fit_transform(np.vstack(title_features)),
+            columns=[f"title_{i}" for i in range(n_components)],
+        )
+        pickle.dump(title_vecs, open(pickle_path, "wb"))
+    anime = pd.concat([anime, title_vecs], axis=1)
 
     # 標準化
     standardized_columns = [
@@ -159,7 +196,9 @@ def preprocess(
     x_valid_columns += [
         col
         for col in joined.columns
-        if col.startswith("genre_") or col.startswith("gender_")
+        if col.startswith("genre_")
+        or col.startswith("gender_")
+        or col.startswith("title_")
     ]
 
     x = joined[x_valid_columns]
@@ -210,7 +249,7 @@ def train_predict(
             _train_x,
             _train_y,
             eval_set=[(_val_x, _val_y), (_train_x, _train_y)],
-            callbacks=[lgb.early_stopping(50, first_metric_only=True, verbose=True)],
+            callbacks=[lgb.early_stopping(100, first_metric_only=True, verbose=True)],
         )
 
         val_pred = model.predict(_val_x)
