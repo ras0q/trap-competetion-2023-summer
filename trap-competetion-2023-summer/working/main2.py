@@ -38,13 +38,13 @@ def preprocess_anime(anime: pd.DataFrame):
         _year_mean = round(anime[f"{p}_year"].mean())
         for i, row in anime.iterrows():
             _y, _m = row[f"{p}_year"], row[f"{p}_month"]
-            if _y is None:
+            if pd.isna(_y):
                 anime.loc[i, f"{p}_ym"] = (
-                    (_m if _m >= 1900 else _year_mean) - 1900
-                ) * 12 + 6
+                    _m if pd.isna(_m) and _m >= 1900 else _year_mean
+                ) - 1900
             else:
                 anime.loc[i, f"{p}_ym"] = (_y - 1900) * 12 + (
-                    _m if 1 <= _m <= 12 else 6
+                    _m if pd.isna(_m) and 1 <= _m <= 12 else 6
                 )
 
     # genreのダミー化
