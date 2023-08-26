@@ -1,3 +1,4 @@
+import threading
 from os import path
 
 import lightgbm as lgb
@@ -131,12 +132,16 @@ def preprocess(
         "end_ym",
     ]
 
-    # 分布,相関係数の可視化
-    if is_train:
+    # 分布,相関係数の可視化 (別スレッドで実行)
+    def pairplot():
         cp = san.CustomPairPlot()
         cp.pairanalyzer(joined[x_valid_columns + ["score"]], diag_kind="hist")
         plt.savefig(path.join(output_dir, "pairplot.png"))
         plt.clf()
+
+    if is_train:
+        thread = threading.Thread(target=pairplot)
+        thread.start()
 
     # 追加のダミーカラム
     x_valid_columns += genres.columns.tolist() + genders.columns.tolist()
