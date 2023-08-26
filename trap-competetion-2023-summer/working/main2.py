@@ -58,6 +58,16 @@ def preprocess(
     _episode_median = joined["episodes"].median()
     joined["episodes"] = joined["episodes"].fillna(_episode_median)
 
+    # yearが欠損しているときはmonthに入っていることがあるので補完する
+    # monthも欠損しているときは平均で補完
+    for p in ["start", "end"]:
+        _year_mean = joined[f"{p}_year"].mean()
+        for i, row in joined[joined[f"{p}_year"].isnull()].iterrows():
+            if row[f"{p}_month"] is not None and row[f"{p}_month"] >= 1900:
+                joined.loc[i, f"{p}_year"] = row[f"{p}_month"]
+            else:
+                joined.loc[i, f"{p}_year"] = _year_mean
+
     # genreのダミー化
     genres = (
         pd.get_dummies(
@@ -83,7 +93,15 @@ def preprocess(
     )
 
     # 標準化
-    standardized_columns = ["ranked", "popularity", "birth_year", "members", "episodes"]
+    standardized_columns = [
+        "ranked",
+        "popularity",
+        "birth_year",
+        "members",
+        "episodes",
+        "start_year",
+        "end_year",
+    ]
     if is_train:
         scaler.fit(joined[standardized_columns])
     joined[standardized_columns] = scaler.transform(joined[standardized_columns])
@@ -98,6 +116,8 @@ def preprocess(
         "birth_year",
         "members",
         "episodes",
+        "start_year",
+        "end_year",
     ]
 
     # 分布,相関係数の可視化
