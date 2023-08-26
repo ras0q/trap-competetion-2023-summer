@@ -202,7 +202,7 @@ def preprocess(
         for col in joined.columns
         if col.startswith("genre_")
         or col.startswith("gender_")
-        or col.startswith("title_")
+        or col.startswith("synopsis_")
     ]
 
     x = joined[x_valid_columns]
@@ -281,7 +281,7 @@ def train_predict(
         lgb.plot_tree(model, figsize=(20, 20))
         plt.savefig(path.join(output_dir, f"tree_{i + 1}.png"))
 
-    return val_preds, test_preds
+    return [], test_preds
 
 
 def submit(sample_sub: pd.DataFrame, test_x: pd.DataFrame, preds: list):
