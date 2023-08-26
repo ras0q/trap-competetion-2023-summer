@@ -16,70 +16,41 @@ SEED = 42
 scaler = pp.StandardScaler()
 
 
-def preprocess(
-    base: pd.DataFrame,
-    anime: pd.DataFrame,
-    profile: pd.DataFrame,
-    is_train: bool,
-):
+def preprocess_anime(anime: pd.DataFrame):
+    anime = anime.copy()
+
     # id が重複している謎のデータの削除
     anime = anime.drop_duplicates(subset="id")
 
-    # 列のマージ
-    joined = base.merge(profile, on="user", how="left").merge(
-        anime, left_on="anime_id", right_on="id", how="left"
-    )
-
-    # 欠損値を表示
-    print(f"is_train: {is_train}, isnull().sum:\n{joined.isnull().sum()}")
-
-    # 範囲外のscoreを含む行を削除
-    if is_train:
-        joined = joined[(joined["score"] >= 1) & (joined["score"] <= 10)]
-
-    # userを整数でラベル化
-    le = pp.LabelEncoder()
-    joined["user_label"] = le.fit_transform(joined["user"])
-
-    # birthdayから誕生年(birth_year)を生成
-    joined["birth_year"] = joined["birthday"].apply(myutil.get_birth_year)
-    # 1935年以前のデータは適当に設定したと思われるので削除
-    joined["birth_year"] = joined["birth_year"].apply(
-        lambda x: x if x >= 1935 else None
-    )
-    # 欠損値を平均で補完
-    _birth_year_mean = joined["birth_year"].mean()
-    joined["birth_year"] = joined["birth_year"].fillna(_birth_year_mean)
-
     # rankedの欠損値を平均で補完
-    _ranked_mean = joined["ranked"].mean()
-    joined["ranked"] = joined["ranked"].fillna(_ranked_mean)
+    _ranked_mean = anime["ranked"].mean()
+    anime["ranked"] = anime["ranked"].fillna(_ranked_mean)
 
     # episodesの欠損値を中央値で補完
-    _episode_median = joined["episodes"].median()
-    joined["episodes"] = joined["episodes"].fillna(_episode_median)
+    _episode_median = anime["episodes"].median()
+    anime["episodes"] = anime["episodes"].fillna(_episode_median)
 
     # yearとmonthを結合してstart_ym,end_ymを生成
     # ym = (year - 1900) * 12 + month
     # yearが欠損しているときはmonthに入っていることがある (monthも欠損しているときは平均で補完)
     # monthの欠損値は6で補完
     for p in ["start", "end"]:
-        _year_mean = round(joined[f"{p}_year"].mean())
-        for i, row in joined.iterrows():
+        _year_mean = round(anime[f"{p}_year"].mean())
+        for i, row in anime.iterrows():
             _y, _m = row[f"{p}_year"], row[f"{p}_month"]
             if _y is None:
-                joined.loc[i, f"{p}_ym"] = (
+                anime.loc[i, f"{p}_ym"] = (
                     (_m if _m >= 1900 else _year_mean) - 1900
                 ) * 12 + 6
             else:
-                joined.loc[i, f"{p}_ym"] = (_y - 1900) * 12 + (
+                anime.loc[i, f"{p}_ym"] = (_y - 1900) * 12 + (
                     _m if 1 <= _m <= 12 else 6
                 )
 
     # genreのダミー化
     genres = (
         pd.get_dummies(
-            joined["genre"]
+            anime["genre"]
             .apply(eval)
             .apply(lambda x: ["NaN"] if len(x) == 0 else x)
             .apply(pd.Series)
@@ -90,17 +61,8 @@ def preprocess(
         .groupby(level=0)
         .sum()
     )
-    joined = pd.concat(
-        [joined, genres],
-        axis=1,
-    )
-
-    # genderのダミー化
-    genders = pd.get_dummies(
-        joined["gender"].fillna("NaN"), prefix="gender_", dtype="uint8"
-    )
-    joined = pd.concat(
-        [joined, genders],
+    anime = pd.concat(
+        [anime, genres],
         axis=1,
     )
 
@@ -108,15 +70,65 @@ def preprocess(
     standardized_columns = [
         "ranked",
         "popularity",
-        "birth_year",
         "members",
         "episodes",
         "start_ym",
         "end_ym",
     ]
+    anime[standardized_columns] = scaler.fit_transform(anime[standardized_columns])
+
+    return anime
+
+
+def preprocess_profile(profile: pd.DataFrame):
+    profile = profile.copy()
+
+    # userを整数でラベル化
+    le = pp.LabelEncoder()
+    profile["user_label"] = le.fit_transform(profile["user"])
+
+    # birthdayから誕生年(birth_year)を生成
+    profile["birth_year"] = profile["birthday"].apply(myutil.get_birth_year)
+    # 1935年以前のデータは適当に設定したと思われるので削除
+    profile["birth_year"] = profile["birth_year"].apply(
+        lambda x: x if x >= 1935 else None
+    )
+    # 欠損値を平均で補完
+    _birth_year_mean = profile["birth_year"].mean()
+    profile["birth_year"] = profile["birth_year"].fillna(_birth_year_mean)
+
+    # genderのダミー化
+    genders = pd.get_dummies(
+        profile["gender"].fillna("NaN"), prefix="gender_", dtype="uint8"
+    )
+    profile = pd.concat(
+        [profile, genders],
+        axis=1,
+    )
+
+    # 標準化
+    standardized_columns = [
+        "birth_year",
+    ]
+    profile[standardized_columns] = scaler.fit_transform(profile[standardized_columns])
+
+    return profile
+
+
+def preprocess(
+    base: pd.DataFrame,
+    anime: pd.DataFrame,
+    profile: pd.DataFrame,
+    is_train: bool,
+):
+    # 列のマージ
+    joined = base.merge(profile, on="user", how="left").merge(
+        anime, left_on="anime_id", right_on="id", how="left"
+    )
+
+    # 範囲外のscoreを含む行を削除
     if is_train:
-        scaler.fit(joined[standardized_columns])
-    joined[standardized_columns] = scaler.transform(joined[standardized_columns])
+        joined = joined[(joined["score"] >= 1) & (joined["score"] <= 10)]
 
     # 使用するカラムのリスト
     # 分布を表示しないものは後に追加する
@@ -144,7 +156,11 @@ def preprocess(
         thread.start()
 
     # 追加のダミーカラム
-    x_valid_columns += genres.columns.tolist() + genders.columns.tolist()
+    x_valid_columns += [
+        col
+        for col in joined.columns
+        if col.startswith("genre_") or col.startswith("gender_")
+    ]
 
     x = joined[x_valid_columns]
     y = joined["score"] if is_train else None
@@ -238,8 +254,14 @@ if __name__ == "__main__":
     csv_profile = pd.read_csv(path.join(input_dir, "profile.csv"))
     csv_sample_sub = pd.read_csv(path.join(input_dir, "sample_submission.csv"))
 
-    train_x, train_y = preprocess(csv_train, csv_anime, csv_profile, is_train=True)
-    test_x, _ = preprocess(csv_test, csv_anime, csv_profile, is_train=False)
+    print("anime preprocessing...")
+    anime = preprocess_anime(csv_anime)
+    print("profile preprocessing...")
+    profile = preprocess_profile(csv_profile)
+    print("train preprocessing...")
+    train_x, train_y = preprocess(csv_train, anime, profile, is_train=True)
+    print("test preprocessing...")
+    test_x, _ = preprocess(csv_test, anime, profile, is_train=False)
 
     val_preds, test_preds = train_predict(
         train_x, train_y, test_x, output_dir, n_split=5
