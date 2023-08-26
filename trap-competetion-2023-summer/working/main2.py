@@ -71,8 +71,12 @@ def preprocess(
     # genreのダミー化
     genres = (
         pd.get_dummies(
-            joined["genre"].apply(eval).apply(pd.Series).stack(),
-            prefix="genre_",
+            joined["genre"]
+            .apply(eval)
+            .apply(lambda x: ["NaN"] if len(x) == 0 else x)
+            .apply(pd.Series)
+            .stack(),
+            prefix="genre",
             dtype="uint8",
         )
         .groupby(level=0)
