@@ -181,6 +181,7 @@ def train_predict(
         random_state=SEED,
         n_estimators=10000,
         num_leaves=8,
+        max_depth=5,
         min_child_samples=5,
         colsample_bytree=0.8,
         reg_alpha=0.3,
