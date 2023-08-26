@@ -65,8 +65,12 @@ def preprocess(
         for i, row in joined[joined[f"{p}_year"].isnull()].iterrows():
             if row[f"{p}_month"] is not None and row[f"{p}_month"] >= 1900:
                 joined.loc[i, f"{p}_year"] = row[f"{p}_month"]
+                joined.loc[i, f"{p}_month"] = None
             else:
                 joined.loc[i, f"{p}_year"] = _year_mean
+
+        # start_month,end_monthの欠損値を-1で補完
+        joined[f"{p}_month"] = joined[f"{p}_month"].fillna(-1)
 
     # genreのダミー化
     genres = (
@@ -104,7 +108,9 @@ def preprocess(
         "members",
         "episodes",
         "start_year",
+        "start_month",
         "end_year",
+        "end_month",
     ]
     if is_train:
         scaler.fit(joined[standardized_columns])
@@ -121,7 +127,9 @@ def preprocess(
         "members",
         "episodes",
         "start_year",
+        "start_month",
         "end_year",
+        "end_month",
     ]
 
     # 分布,相関係数の可視化
