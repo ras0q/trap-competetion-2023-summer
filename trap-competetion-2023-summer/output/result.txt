@@ -1,5 +1,5 @@
-fold 0: 4.12684
-fold 1: 4.11169
-fold 2: 4.23388
-fold 3: 4.18122
-fold 4: 4.20547
+fold 0: global val: 4.12925, local val: 4.22125
+fold 1: global val: 4.16435, local val: 4.24242
+fold 2: global val: 4.14497, local val: 4.18654
+fold 3: global val: 4.15912, local val: 4.20749
+fold 4: global val: 4.14011, local val: 4.17601

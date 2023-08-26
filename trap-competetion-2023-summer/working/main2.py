@@ -232,10 +232,6 @@ def train_predict(
         verbose=-1,
     )
 
-    val_preds = []
-    test_preds = []
-    result_file = open(path.join(output_dir, "result.txt"), "w")
-
     kf = ms.KFold(n_splits=n_split, shuffle=True, random_state=SEED)
 
     # import debug
@@ -243,35 +239,47 @@ def train_predict(
     #     model, train_x, train_y, output_dir, cv=kf, random_state=SEED
     # )
 
+    # early stopping用にtrain_x,train_yを分割
+    train_x, val_x, train_y, val_y = ms.train_test_split(
+        train_x, train_y, test_size=0.2, random_state=SEED
+    )
+
+    test_preds = []
+    result_file = open(path.join(output_dir, "result.txt"), "w")
     for i, (train_idx, val_idx) in enumerate(kf.split(train_x, train_y)):
         _train_x = train_x.iloc[train_idx]
         _train_y = train_y.iloc[train_idx]
         _val_x = train_x.iloc[val_idx]
         _val_y = train_y.iloc[val_idx]
 
+        # train
         model.fit(
             _train_x,
             _train_y,
-            eval_set=[(_val_x, _val_y), (_train_x, _train_y)],
+            eval_set=[(val_x, val_y), (_val_x, _val_y), (_train_x, _train_y)],
+            eval_names=["global val", "local val", "train"],
             callbacks=[lgb.early_stopping(100, first_metric_only=True, verbose=True)],
         )
 
-        val_pred = model.predict(_val_x)
-        val_preds.append(val_pred)
+        # validation
+        g_val_loss = mt.mean_squared_error(val_y, model.predict(val_x))
+        l_val_loss = mt.mean_squared_error(_val_y, model.predict(_val_x))
+        result_file.write(
+            f"fold {i}: global val: {g_val_loss:.5f}, local val: {l_val_loss:.5f}\n"
+        )
 
-        val_loss = mt.mean_squared_error(_val_y, val_pred)
-        msg = f"fold {i}: {val_loss:.5f}"
-        print(msg)
-        result_file.write(msg + "\n")
+        # test
+        test_preds.append(model.predict(test_x))
 
-        test_pred = model.predict(test_x)
-        test_preds.append(test_pred)
-
+        # plot results
         lgb.plot_importance(model, importance_type="gain", max_num_features=15)
         plt.savefig(path.join(output_dir, f"feature_importance_{i + 1}.png"))
 
         lgb.plot_metric(model)
         plt.savefig(path.join(output_dir, f"metric_{i + 1}.png"))
+
+        lgb.plot_tree(model, figsize=(20, 20))
+        plt.savefig(path.join(output_dir, f"tree_{i + 1}.png"))
 
     return val_preds, test_preds
 
@@ -312,5 +320,4 @@ if __name__ == "__main__":
     )
 
     sub = submit(csv_sample_sub, test_x, test_preds)
-    plt.savefig(path.join(output_dir, "score.png"))
     sub.to_csv(path.join(output_dir, "submission.csv"), index=False)
