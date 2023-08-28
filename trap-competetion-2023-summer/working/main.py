@@ -245,7 +245,7 @@ def train_predict(
     )
 
     test_preds = []
-    result_file = open(path.join(temp_dir, "result.txt"), "w")
+    result_file = open(path.join(__file__, "result.txt"), "w")
     for i, (train_idx, val_idx) in enumerate(kf.split(train_x, train_y)):
         _train_x = train_x.iloc[train_idx]
         _train_y = train_y.iloc[train_idx]
@@ -318,4 +318,4 @@ if __name__ == "__main__":
     val_preds, test_preds = train_predict(train_x, train_y, test_x, temp_dir, n_split=5)
 
     sub = submit(csv_sample_sub, test_x, test_preds)
-    sub.to_csv(path.join(temp_dir, "submission.csv"), index=False)
+    sub.to_csv(path.join(__file__, "submission.csv"), index=False)
