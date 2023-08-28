@@ -10,7 +10,7 @@ def plot_validation_curve(
     model: lgb.LGBMRegressor,
     train_x: pd.DataFrame,
     train_y: pd.Series,
-    output_dir: str,
+    temp_dir: str,
     cv: ms.KFold,
     random_state: int = 42,
 ):
@@ -72,5 +72,5 @@ def plot_validation_curve(
         )
         plt.title(f"validation curve: {k}")
         plt.legend()
-        plt.savefig(path.join(output_dir, f"validation_curve_{k}.png"))
+        plt.savefig(path.join(temp_dir, f"validation_curve_{k}.png"))
         plt.clf()

@@ -189,7 +189,7 @@ def preprocess(
     def pairplot():
         cp = san.CustomPairPlot()
         cp.pairanalyzer(joined[x_valid_columns + ["score"]], diag_kind="hist")
-        plt.savefig(path.join(output_dir, "pairplot.png"))
+        plt.savefig(path.join(temp_dir, "pairplot.png"))
         plt.clf()
 
     if is_train:
@@ -215,7 +215,7 @@ def train_predict(
     train_x: pd.DataFrame,
     train_y: pd.Series,
     test_x: pd.DataFrame,
-    output_dir: str,
+    temp_dir: str,
     n_split: int,
 ):
     model = lgb.LGBMRegressor(
@@ -236,7 +236,7 @@ def train_predict(
 
     # import debug
     # debug.plot_validation_curve(
-    #     model, train_x, train_y, output_dir, cv=kf, random_state=SEED
+    #     model, train_x, train_y, temp_dir, cv=kf, random_state=SEED
     # )
 
     # early stopping用にtrain_x,train_yを分割
@@ -245,7 +245,7 @@ def train_predict(
     )
 
     test_preds = []
-    result_file = open(path.join(output_dir, "result.txt"), "w")
+    result_file = open(path.join(temp_dir, "result.txt"), "w")
     for i, (train_idx, val_idx) in enumerate(kf.split(train_x, train_y)):
         _train_x = train_x.iloc[train_idx]
         _train_y = train_y.iloc[train_idx]
@@ -273,13 +273,13 @@ def train_predict(
 
         # plot results
         lgb.plot_importance(model, importance_type="gain", max_num_features=15)
-        plt.savefig(path.join(output_dir, f"feature_importance_{i + 1}.png"))
+        plt.savefig(path.join(temp_dir, f"feature_importance_{i + 1}.png"))
 
         lgb.plot_metric(model)
-        plt.savefig(path.join(output_dir, f"metric_{i + 1}.png"))
+        plt.savefig(path.join(temp_dir, f"metric_{i + 1}.png"))
 
         lgb.plot_tree(model, figsize=(20, 20))
-        plt.savefig(path.join(output_dir, f"tree_{i + 1}.png"))
+        plt.savefig(path.join(temp_dir, f"tree_{i + 1}.png"))
 
     return [], test_preds
 
@@ -298,7 +298,7 @@ def submit(sample_sub: pd.DataFrame, test_x: pd.DataFrame, preds: list):
 
 if __name__ == "__main__":
     input_dir = path.join(path.dirname(__file__), "..", "input")
-    output_dir = path.join(path.dirname(__file__), "..", "output")
+    temp_dir = path.join(path.dirname(__file__), "..", "temp")
 
     csv_train = pd.read_csv(path.join(input_dir, "train.csv"))
     csv_test = pd.read_csv(path.join(input_dir, "test.csv"))
@@ -315,9 +315,7 @@ if __name__ == "__main__":
     print("test preprocessing...")
     test_x, _ = preprocess(csv_test, anime, profile, is_train=False)
 
-    val_preds, test_preds = train_predict(
-        train_x, train_y, test_x, output_dir, n_split=5
-    )
+    val_preds, test_preds = train_predict(train_x, train_y, test_x, temp_dir, n_split=5)
 
     sub = submit(csv_sample_sub, test_x, test_preds)
-    sub.to_csv(path.join(output_dir, "submission.csv"), index=False)
+    sub.to_csv(path.join(temp_dir, "submission.csv"), index=False)
