@@ -33,7 +33,8 @@ bsv = bert.BertSequenceVectorizer()
 # print("DistributedDataParallel initialized.")
 bsv_parallel = nn.DataParallel(bsv)
 
-svd = decomposition.TruncatedSVD(n_components=50, random_state=SEED)
+svd_n_components = 50
+svd = decomposition.TruncatedSVD(n_components=svd_n_components, random_state=SEED)
 bert_array = np.zeros((1, 768))
 
 
@@ -59,42 +60,45 @@ def preprocess(
         joined["synopsis"].fillna("").apply(lambda x: len(x.split()))
     )
 
-    # titleをbertでベクトル化
-    global bsv_parallel
-    global svd
-    global bert_array
-    title_features: pd.Series = (
-        joined["title"]
-        .fillna("")
-        .progress_apply(
-            lambda x: bsv_parallel.module.forward(bsv.vectorize(x))
-        )  # TODO: 生のmoduleを使った方が速い、本来はDataParallelを使うべき
-    )
-    joined = joined.drop(columns=["title"])
-    bert_array = np.zeros((len(joined), 768))
-    for i, title_feature in enumerate(title_features):
-        bert_array[i] = title_feature
-    title_vecs = pd.DataFrame(
-        svd.fit_transform(bert_array),
-        columns=[f"title_{i}" for i in range(50)],
-    )
-    joined = pd.concat([joined, title_vecs], axis=1)
+    # # titleをbertでベクトル化
+    # global bsv_parallel
+    # global svd
+    # global bert_array
+    # title_features: pd.Series = (
+    #     joined["title"]
+    #     .fillna("")
+    #     .progress_apply(
+    #         lambda x: bsv_parallel.module.forward(bsv.vectorize(x))
+    #     )  # TODO: 生のmoduleを使った方が速い、本来はDataParallelを使うべき
+    # )
+    # joined = joined.drop(columns=["title"])
+    # bert_array = np.zeros((len(joined), 768))
+    # for i, title_feature in enumerate(title_features):
+    #     bert_array[i] = title_feature
+    # title_vecs = pd.DataFrame(
+    #     svd.fit_transform(bert_array),
+    #     columns=[f"title_{i}" for i in range(svd_n_components)],
+    # )
+    # joined = pd.concat([joined, title_vecs], axis=1)
 
-    # synopsisをbertでベクトル化
-    synopsis_features: pd.Series = (
-        joined["synopsis"]
-        .fillna("")
-        .progress_apply(lambda x: bsv_parallel.module.forward(bsv.vectorize(x)))
-    )
-    joined = joined.drop(columns=["synopsis"])
-    bert_array = np.zeros((len(joined), 768))
-    for i, synopsis_feature in enumerate(synopsis_features):
-        bert_array[i] = synopsis_feature
-    synopsis_vecs = pd.DataFrame(
-        svd.fit_transform(bert_array),
-        columns=[f"synopsis_{i}" for i in range(50)],
-    )
-    joined = pd.concat([joined, synopsis_vecs], axis=1)
+    # # synopsisをbertでベクトル化
+    # synopsis_features: pd.Series = (
+    #     joined["synopsis"]
+    #     .fillna("")
+    #     .progress_apply(lambda x: bsv_parallel.module.forward(bsv.vectorize(x)))
+    # )
+    # joined = joined.drop(columns=["synopsis"])
+    # bert_array = np.zeros((len(joined), 768))
+    # for i, synopsis_feature in enumerate(synopsis_features):
+    #     bert_array[i] = synopsis_feature
+    # synopsis_vecs = pd.DataFrame(
+    #     svd.fit_transform(bert_array),
+    #     columns=[f"synopsis_{i}" for i in range(svd_n_components)],
+    # )
+    # joined = pd.concat([joined, synopsis_vecs], axis=1)
+
+    # TODO: BERTを復活させたら消す
+    joined = joined.drop(columns=["title", "synopsis"])
 
     # 誕生年だけを抽出
     def _get_birth_year(birthday):
@@ -111,9 +115,6 @@ def preprocess(
 
     joined["birth_year"] = joined["birthday"].apply(_get_birth_year)
     joined = joined.drop(columns=["birthday"])
-
-    # start_day, end_dayを除外する
-    joined = joined.drop(columns=["start_day", "end_day"])
 
     # 1-12以外のstart_month,end_monthをNoneにする
     joined["start_month"] = joined["start_month"].apply(
@@ -158,17 +159,30 @@ def preprocess(
     #     print(joined[col].describe())
     #     print("")
 
-    # 残りの欠損値を平均で埋める
+    # 不用なカラムの削除
+    joined = joined.drop(columns=["start_day", "end_day"])
+
+    # 欠損値の処理
     for col in joined.columns:
         rows = joined[col]
-        if rows.dtype == "int64" or rows.dtype == "float64":
-            rows = rows.fillna(rows.mean(), inplace=True)
-        # TODO: type == objectの場合はとりあえずdropする
-        elif type(rows[0]) == str:
-            joined = joined.drop(columns=[col])
+        if col in [
+            "start_month",
+            "start_year",
+            "end_month",
+            "end_year",
+        ]:
+            joined[col] = rows.fillna(-1)
+        # 平均で埋める
+        elif rows.dtype == "int64" or rows.dtype == "float64":
+            joined[col] = rows.fillna(rows.mean())
 
     # idの削除
-    joined = joined.drop(columns=["id", "anime_id"])
+    joined = joined.drop(columns=["user", "id", "anime_id"])
+
+    # TODO: dtype == objectはとりあえずdropする
+    for col in joined.columns:
+        if joined[col].dtype == "object":
+            joined = joined.drop(columns=[col])
 
     # 標準化
     x, y = joined, None
@@ -264,6 +278,21 @@ if __name__ == "__main__":
 
     train_x, train_y = preprocess(csv_train, csv_anime, csv_profile, is_train=True)
     test_x, _ = preprocess(csv_test, csv_anime, csv_profile, is_train=False)
+
+    # train_xとtrain_yの相関を見る
+    fig = plt.figure(figsize=(20, 20 * 2))
+    for i, col in enumerate(train_x.columns):
+        plt.subplot(len(train_x.columns) // 5 + 1, 5, i + 1)
+        plt.scatter(train_x[col], train_y, s=0.5)
+        plt.xlabel(col)
+        plt.ylabel("score")
+        plt.title(
+            f"corr: {np.corrcoef(train_x[col], train_y)[0, 1]:.4f}, "
+            f"nan_rate: {train_x[col].isnull().sum() / len(train_x[col]):.4f}"
+        )
+    plt.tight_layout()
+    plt.savefig(path.join(output_dir, "tmp_correlation.png"))
+    plt.clf()
 
     # for col in train_x.columns:
     #     if train_x[col].dtype != "uint8":

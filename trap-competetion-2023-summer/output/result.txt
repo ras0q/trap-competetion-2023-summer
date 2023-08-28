@@ -1,4 +1,5 @@
-Fold 1 MSE: 4.1567
-Fold 2 MSE: 4.2813
-Fold 3 MSE: 4.2169
-Fold 4 MSE: 4.2488
+fold 0: global val: 4.13598, local val: 4.23221
+fold 1: global val: 4.15682, local val: 4.23409
+fold 2: global val: 4.13963, local val: 4.19364
+fold 3: global val: 4.15583, local val: 4.20173
+fold 4: global val: 4.15016, local val: 4.19142
